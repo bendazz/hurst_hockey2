@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SQLModel Query Practice</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --text: #1a1f36;
+      --muted: #5c6888;
+      --border: #dbe2f0;
+      --accent: #2f6fed;
+      --accent-2: #1d4ed8;
+      --answer-bg: #0f172a;
+      --answer-text: #e2e8f0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b1220;
+        --card: #111a2e;
+        --text: #e5ecff;
+        --muted: #9fb1dc;
+        --border: #263657;
+        --accent: #5b8bff;
+        --accent-2: #7aa1ff;
+        --answer-bg: #020617;
+        --answer-text: #e2e8f0;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.9rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0 0 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 0.92rem;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    button.primary:hover { background: var(--accent-2); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 12px 0;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .prompt {
+      margin: 4px 0 10px;
+      font-weight: 600;
+    }
+
+    .answer {
+      display: none;
+      background: var(--answer-bg);
+      color: var(--answer-text);
+      border-radius: 10px;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      margin-top: 8px;
+      border: 1px solid #1e293b;
+    }
+
+    .answer.open { display: block; }
+
+    pre { margin: 0; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>SQLModel Query Practice</h1>
+    <p class="subtitle">No joins. Students can draft a query, then reveal or hide the answer.</p>
+
+    <div class="toolbar">
+      <button class="primary" id="showAll">Reveal All Answers</button>
+      <button id="hideAll">Hide All Answers</button>
+    </div>
+
+    <section id="app"></section>
+  </main>
+
+  <script>
+    const exercises = [
+      { id: 1, concept: "select", prompt: "Select all rows from Bio.", answer: "statement = select(Bio)" },
+      { id: 2, concept: "select columns", prompt: "Select only first_name, last_name, and position from Bio.", answer: "statement = select(Bio.first_name, Bio.last_name, Bio.position)" },
+      { id: 3, concept: "where", prompt: "Find players with weight > 200.", answer: "statement = select(Bio).where(Bio.weight > 200)" },
+      { id: 4, concept: "and", prompt: "Find players where position == \"Goaltender\" AND weight > 190.", answer: "statement = select(Bio).where((Bio.position == \"Goaltender\") & (Bio.weight > 190))" },
+      { id: 5, concept: "or", prompt: "Find players where position == \"Goaltender\" OR weight > 210.", answer: "statement = select(Bio).where((Bio.position == \"Goaltender\") | (Bio.weight > 210))" },
+      { id: 6, concept: "like", prompt: "Find players whose last_name starts with \"S\".", answer: "statement = select(Bio).where(Bio.last_name.like(\"S%\"))" },
+      { id: 7, concept: "ilike", prompt: "Find players whose hometown contains \"York\" (case-insensitive).", answer: "statement = select(Bio).where(Bio.hometown.ilike(\"%york%\"))" },
+      { id: 8, concept: "mixed logic", prompt: "Find players where (position == \"Defense\") OR (position == \"Goaltender\" AND weight > 190).", answer: "statement = select(Bio).where((Bio.position == \"Defense\") | ((Bio.position == \"Goaltender\") & (Bio.weight > 190)))" },
+      { id: 9, concept: "order_by", prompt: "Show players ordered by weight descending.", answer: "statement = select(Bio).order_by(Bio.weight.desc())" },
+      { id: 10, concept: "order_by", prompt: "Show players ordered by position, then last_name.", answer: "statement = select(Bio).order_by(Bio.position, Bio.last_name)" },
+      { id: 11, concept: "group_by + func.count", prompt: "Group Bio by position and count players.", answer: "player_count = func.count().label(\"player_count\")\nstatement = select(Bio.position, player_count).group_by(Bio.position)" },
+      { id: 12, concept: "group_by + func.avg", prompt: "Group Bio by position and compute average weight.", answer: "avg_weight = func.avg(Bio.weight).label(\"avg_weight\")\nstatement = (\n    select(Bio.position, avg_weight)\n    .where(Bio.weight.is_not(None), Bio.position.is_not(None))\n    .group_by(Bio.position)\n)" },
+      { id: 13, concept: "having", prompt: "Average weight per position, but only groups with avg > 190.", answer: "avg_weight = func.avg(Bio.weight).label(\"avg_weight\")\nstatement = (\n    select(Bio.position, avg_weight)\n    .where(Bio.weight.is_not(None), Bio.position.is_not(None))\n    .group_by(Bio.position)\n    .having(avg_weight > 190)\n)" },
+      { id: 14, concept: "order_by aggregate", prompt: "Average weight per position, highest average first.", answer: "avg_weight = func.avg(Bio.weight).label(\"avg_weight\")\nstatement = (\n    select(Bio.position, avg_weight)\n    .where(Bio.weight.is_not(None), Bio.position.is_not(None))\n    .group_by(Bio.position)\n    .order_by(desc(avg_weight))\n)" },
+      { id: 15, concept: "having count", prompt: "Group by academic_class and show only classes with at least 3 players.", answer: "player_count = func.count().label(\"player_count\")\nstatement = (\n    select(Bio.academic_class, player_count)\n    .where(Bio.academic_class.is_not(None))\n    .group_by(Bio.academic_class)\n    .having(player_count >= 3)\n)" },
+      { id: 16, concept: "select columns", prompt: "Select first_name, last_name, GP, G, A, PTS from Stats.", answer: "statement = select(Stats.first_name, Stats.last_name, Stats.GP, Stats.G, Stats.A, Stats.PTS)" },
+      { id: 17, concept: "where", prompt: "Find players with PTS >= 20.", answer: "statement = select(Stats).where(Stats.PTS >= 20)" },
+      { id: 18, concept: "and", prompt: "Find players with GP >= 20 AND PTS >= 15.", answer: "statement = select(Stats).where((Stats.GP >= 20) & (Stats.PTS >= 15))" },
+      { id: 19, concept: "or", prompt: "Find players with PPG > 0 OR SHG > 0.", answer: "statement = select(Stats).where((Stats.PPG > 0) | (Stats.SHG > 0))" },
+      { id: 20, concept: "like", prompt: "Find players whose last_name ends with \"son\".", answer: "statement = select(Stats).where(Stats.last_name.like(\"%son\"))" },
+      { id: 21, concept: "order_by + limit", prompt: "Show top 10 players by PTS descending.", answer: "statement = select(Stats).order_by(Stats.PTS.desc()).limit(10)" },
+      { id: 22, concept: "group_by + count", prompt: "Group Stats by GP and count players in each GP value.", answer: "player_count = func.count().label(\"player_count\")\nstatement = select(Stats.GP, player_count).where(Stats.GP.is_not(None)).group_by(Stats.GP)" },
+      { id: 23, concept: "group_by + avg", prompt: "Group Stats by GP and compute average PTS per GP.", answer: "avg_pts = func.avg(Stats.PTS).label(\"avg_pts\")\nstatement = (\n    select(Stats.GP, avg_pts)\n    .where(Stats.GP.is_not(None), Stats.PTS.is_not(None))\n    .group_by(Stats.GP)\n)" },
+      { id: 24, concept: "having", prompt: "Keep only GP groups where average PTS >= 10.", answer: "avg_pts = func.avg(Stats.PTS).label(\"avg_pts\")\nstatement = (\n    select(Stats.GP, avg_pts)\n    .where(Stats.GP.is_not(None), Stats.PTS.is_not(None))\n    .group_by(Stats.GP)\n    .having(avg_pts >= 10)\n)" },
+      { id: 25, concept: "max + order_by", prompt: "Group Stats by number, get max PTS, order highest first.", answer: "max_pts = func.max(Stats.PTS).label(\"max_pts\")\nstatement = (\n    select(Stats.number, max_pts)\n    .where(Stats.number.is_not(None), Stats.PTS.is_not(None))\n    .group_by(Stats.number)\n    .order_by(desc(max_pts))\n)" },
+      { id: 26, concept: "grouping challenge", prompt: "Group Bio by hometown, count players, keep hometowns with 2+ players, order by count desc.", answer: "player_count = func.count().label(\"player_count\")\nstatement = (\n    select(Bio.hometown, player_count)\n    .where(Bio.hometown.is_not(None))\n    .group_by(Bio.hometown)\n    .having(player_count >= 2)\n    .order_by(desc(player_count))\n)" },
+      { id: 27, concept: "multiple aggregates", prompt: "Group Bio by position and compute min/max/avg weight.", answer: "min_weight = func.min(Bio.weight).label(\"min_weight\")\nmax_weight = func.max(Bio.weight).label(\"max_weight\")\navg_weight = func.avg(Bio.weight).label(\"avg_weight\")\nstatement = (\n    select(Bio.position, min_weight, max_weight, avg_weight)\n    .where(Bio.position.is_not(None), Bio.weight.is_not(None))\n    .group_by(Bio.position)\n)" },
+      { id: 28, concept: "mixed logic", prompt: "Find Stats rows where (PTS >= 15 AND Plus_Minus > 0) OR (G >= 10).", answer: "statement = select(Stats).where(((Stats.PTS >= 15) & (Stats.Plus_Minus > 0)) | (Stats.G >= 10))" },
+      { id: 29, concept: "func + group_by", prompt: "Group Stats by first letter of last_name and count players.", answer: "initial = func.substr(Stats.last_name, 1, 1).label(\"initial\")\nplayer_count = func.count().label(\"player_count\")\nstatement = (\n    select(initial, player_count)\n    .where(Stats.last_name.is_not(None))\n    .group_by(initial)\n    .order_by(initial)\n)" },
+      { id: 30, concept: "having + order_by", prompt: "Average SH_PCT by GP, keep groups with avg > 10, order desc.", answer: "avg_sh_pct = func.avg(Stats.SH_PCT).label(\"avg_sh_pct\")\nstatement = (\n    select(Stats.GP, avg_sh_pct)\n    .where(Stats.GP.is_not(None), Stats.SH_PCT.is_not(None))\n    .group_by(Stats.GP)\n    .having(avg_sh_pct > 10)\n    .order_by(desc(avg_sh_pct))\n)" }
+    ];
+
+    const app = document.getElementById("app");
+
+    function buildCard(exercise) {
+      const card = document.createElement("article");
+      card.className = "card";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `#${exercise.id} • ${exercise.concept}`;
+
+      const prompt = document.createElement("div");
+      prompt.className = "prompt";
+      prompt.textContent = exercise.prompt;
+
+      const button = document.createElement("button");
+      button.textContent = "Reveal Answer";
+
+      const answer = document.createElement("div");
+      answer.className = "answer";
+      answer.innerHTML = `<pre>${escapeHtml(exercise.answer)}</pre>`;
+
+      button.addEventListener("click", () => {
+        const open = answer.classList.toggle("open");
+        button.textContent = open ? "Hide Answer" : "Reveal Answer";
+      });
+
+      card.append(meta, prompt, button, answer);
+      return card;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    exercises.forEach(ex => app.appendChild(buildCard(ex)));
+
+    document.getElementById("showAll").addEventListener("click", () => {
+      document.querySelectorAll(".answer").forEach(answer => answer.classList.add("open"));
+      document.querySelectorAll(".card button").forEach(btn => btn.textContent = "Hide Answer");
+    });
+
+    document.getElementById("hideAll").addEventListener("click", () => {
+      document.querySelectorAll(".answer").forEach(answer => answer.classList.remove("open"));
+      document.querySelectorAll(".card button").forEach(btn => btn.textContent = "Reveal Answer");
+    });
+  </script>
+</body>
+</html>

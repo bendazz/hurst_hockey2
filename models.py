@@ -1,11 +1,11 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, create_engine
 from typing import Optional
 
 class Bio(SQLModel, table=True):
     first_name: str = Field(primary_key = True)
     last_name: str = Field(primary_key = True)
     number: int | None = None
-    postion: str | None = None
+    position: str | None = None
     height: str | None = None
     weight: int | None = None
     academic_class: str | None = None
@@ -36,3 +36,6 @@ class Stats(SQLModel, table=True):
     MAJ: Optional[int] = None
     OTH: Optional[int] = None
     BLK: Optional[int] = None
+
+engine = create_engine('sqlite:///hockey.db')
+SQLModel.metadata.create_all(engine)

@@ -1,0 +1,282 @@
+SQLModel Query Practice (No Joins Yet)
+
+Tables available:
+- Bio: first_name, last_name, number, position, height, weight, academic_class, hometown, high_school
+- Stats: first_name, last_name, number, GP, G, A, PTS, SH, SH_PCT, Plus_Minus, PPG, SHG, FG, GWG, GTG, OTG, HTG, UAG, PN_PIM, MIN, MAJ, OTH, BLK
+
+Goal: Practice select, where, and/or, grouping, func, order_by, like, and having.
+
+BIO TABLE QUERIES
+
+1) Select all rows from Bio.
+   - Concepts: select
+
+2) Select only first_name, last_name, and position from Bio.
+   - Concepts: select specific columns
+
+3) Find players with weight > 200.
+   - Concepts: where
+
+4) Find players where position == "Goaltender" AND weight > 190.
+   - Concepts: where + and
+
+5) Find players where position == "Goaltender" OR weight > 210.
+   - Concepts: where + or
+
+6) Find players whose last_name starts with "S".
+   - Concepts: like ("S%")
+
+7) Find players whose hometown contains "York" (case-insensitive if possible).
+   - Concepts: ilike / like + wildcard
+
+8) Find players where (position == "Defense") OR (position == "Goaltender" AND weight > 190).
+   - Concepts: mixed and/or with parentheses
+
+9) Show players ordered by weight descending (heaviest first).
+   - Concepts: order_by
+
+10) Show players ordered by position ascending, then last_name ascending.
+    - Concepts: order_by multiple columns
+
+11) Group Bio by position and count how many players are in each position.
+    - Concepts: group_by + func.count
+
+12) Group Bio by position and compute average weight per position.
+    - Concepts: group_by + func.avg
+
+13) For average weight per position, keep only groups with average weight > 190.
+    - Concepts: having
+
+14) For average weight per position, order results from highest average weight to lowest.
+    - Concepts: order_by on labeled aggregate
+
+15) Group by academic_class and count players, but only show classes with at least 3 players.
+    - Concepts: group_by + func.count + having
+
+STATS TABLE QUERIES
+
+16) Select first_name, last_name, GP, G, A, PTS from Stats.
+    - Concepts: select specific columns
+
+17) Find players with PTS >= 20.
+    - Concepts: where
+
+18) Find players with GP >= 20 AND PTS >= 15.
+    - Concepts: and
+
+19) Find players with PPG > 0 OR SHG > 0.
+    - Concepts: or
+
+20) Find players whose last_name ends with "son".
+    - Concepts: like ("%son")
+
+21) Show top 10 players by PTS descending.
+    - Concepts: order_by + limit
+
+22) Group Stats by GP and count how many players have each GP value.
+    - Concepts: group_by + func.count
+
+23) Group Stats by GP and compute average PTS for each GP group.
+    - Concepts: group_by + func.avg
+
+24) Keep only GP groups where average PTS >= 10.
+    - Concepts: having
+
+25) Group Stats by number and compute max PTS in each number group; order highest first.
+    - Concepts: group_by + func.max + order_by
+
+CHALLENGE QUERIES (still no joins)
+
+26) Bio: group by hometown, count players, show only hometowns with 2+ players, ordered by count descending.
+    - Concepts: group_by + count + having + order_by
+
+27) Bio: group by position, compute min/max/avg weight in one query.
+    - Concepts: multiple func aggregates
+
+28) Stats: find players where (PTS >= 15 AND Plus_Minus > 0) OR (G >= 10).
+    - Concepts: mixed and/or logic
+
+29) Stats: group by last_name initial (first character) and count players per initial.
+    - Concepts: func + group_by
+
+30) Stats: average SH_PCT by GP group, only groups with avg SH_PCT > 10, ordered descending.
+    - Concepts: func.avg + having + order_by
+
+Optional extension for students:
+- For any grouped query, ask students to label aggregate columns (e.g., avg_weight, player_count) and order by that labeled expression.
+
+
+====================
+ANSWER KEY (SQLModel)
+====================
+
+Suggested imports for examples:
+from sqlmodel import Session, select
+from sqlalchemy import func, desc
+from models import engine, Bio, Stats
+
+1) Select all rows from Bio.
+statement = select(Bio)
+
+2) Select only first_name, last_name, and position from Bio.
+statement = select(Bio.first_name, Bio.last_name, Bio.position)
+
+3) Find players with weight > 200.
+statement = select(Bio).where(Bio.weight > 200)
+
+4) Find players where position == "Goaltender" AND weight > 190.
+statement = select(Bio).where((Bio.position == "Goaltender") & (Bio.weight > 190))
+
+5) Find players where position == "Goaltender" OR weight > 210.
+statement = select(Bio).where((Bio.position == "Goaltender") | (Bio.weight > 210))
+
+6) Find players whose last_name starts with "S".
+statement = select(Bio).where(Bio.last_name.like("S%"))
+
+7) Find players whose hometown contains "York" (case-insensitive if possible).
+statement = select(Bio).where(Bio.hometown.ilike("%york%"))
+
+8) Find players where (position == "Defense") OR (position == "Goaltender" AND weight > 190).
+statement = select(Bio).where((Bio.position == "Defense") | ((Bio.position == "Goaltender") & (Bio.weight > 190)))
+
+9) Show players ordered by weight descending (heaviest first).
+statement = select(Bio).order_by(Bio.weight.desc())
+
+10) Show players ordered by position ascending, then last_name ascending.
+statement = select(Bio).order_by(Bio.position, Bio.last_name)
+
+11) Group Bio by position and count how many players are in each position.
+player_count = func.count().label("player_count")
+statement = select(Bio.position, player_count).group_by(Bio.position)
+
+12) Group Bio by position and compute average weight per position.
+avg_weight = func.avg(Bio.weight).label("avg_weight")
+statement = (
+    select(Bio.position, avg_weight)
+    .where(Bio.weight.is_not(None), Bio.position.is_not(None))
+    .group_by(Bio.position)
+)
+
+13) For average weight per position, keep only groups with average weight > 190.
+avg_weight = func.avg(Bio.weight).label("avg_weight")
+statement = (
+    select(Bio.position, avg_weight)
+    .where(Bio.weight.is_not(None), Bio.position.is_not(None))
+    .group_by(Bio.position)
+    .having(avg_weight > 190)
+)
+
+14) For average weight per position, order results from highest average weight to lowest.
+avg_weight = func.avg(Bio.weight).label("avg_weight")
+statement = (
+    select(Bio.position, avg_weight)
+    .where(Bio.weight.is_not(None), Bio.position.is_not(None))
+    .group_by(Bio.position)
+    .order_by(desc(avg_weight))
+)
+
+15) Group by academic_class and count players, but only show classes with at least 3 players.
+player_count = func.count().label("player_count")
+statement = (
+    select(Bio.academic_class, player_count)
+    .where(Bio.academic_class.is_not(None))
+    .group_by(Bio.academic_class)
+    .having(player_count >= 3)
+)
+
+16) Select first_name, last_name, GP, G, A, PTS from Stats.
+statement = select(Stats.first_name, Stats.last_name, Stats.GP, Stats.G, Stats.A, Stats.PTS)
+
+17) Find players with PTS >= 20.
+statement = select(Stats).where(Stats.PTS >= 20)
+
+18) Find players with GP >= 20 AND PTS >= 15.
+statement = select(Stats).where((Stats.GP >= 20) & (Stats.PTS >= 15))
+
+19) Find players with PPG > 0 OR SHG > 0.
+statement = select(Stats).where((Stats.PPG > 0) | (Stats.SHG > 0))
+
+20) Find players whose last_name ends with "son".
+statement = select(Stats).where(Stats.last_name.like("%son"))
+
+21) Show top 10 players by PTS descending.
+statement = select(Stats).order_by(Stats.PTS.desc()).limit(10)
+
+22) Group Stats by GP and count how many players have each GP value.
+player_count = func.count().label("player_count")
+statement = select(Stats.GP, player_count).where(Stats.GP.is_not(None)).group_by(Stats.GP)
+
+23) Group Stats by GP and compute average PTS for each GP group.
+avg_pts = func.avg(Stats.PTS).label("avg_pts")
+statement = (
+    select(Stats.GP, avg_pts)
+    .where(Stats.GP.is_not(None), Stats.PTS.is_not(None))
+    .group_by(Stats.GP)
+)
+
+24) Keep only GP groups where average PTS >= 10.
+avg_pts = func.avg(Stats.PTS).label("avg_pts")
+statement = (
+    select(Stats.GP, avg_pts)
+    .where(Stats.GP.is_not(None), Stats.PTS.is_not(None))
+    .group_by(Stats.GP)
+    .having(avg_pts >= 10)
+)
+
+25) Group Stats by number and compute max PTS in each number group; order highest first.
+max_pts = func.max(Stats.PTS).label("max_pts")
+statement = (
+    select(Stats.number, max_pts)
+    .where(Stats.number.is_not(None), Stats.PTS.is_not(None))
+    .group_by(Stats.number)
+    .order_by(desc(max_pts))
+)
+
+26) Bio: group by hometown, count players, show only hometowns with 2+ players, ordered by count descending.
+player_count = func.count().label("player_count")
+statement = (
+    select(Bio.hometown, player_count)
+    .where(Bio.hometown.is_not(None))
+    .group_by(Bio.hometown)
+    .having(player_count >= 2)
+    .order_by(desc(player_count))
+)
+
+27) Bio: group by position, compute min/max/avg weight in one query.
+min_weight = func.min(Bio.weight).label("min_weight")
+max_weight = func.max(Bio.weight).label("max_weight")
+avg_weight = func.avg(Bio.weight).label("avg_weight")
+statement = (
+    select(Bio.position, min_weight, max_weight, avg_weight)
+    .where(Bio.position.is_not(None), Bio.weight.is_not(None))
+    .group_by(Bio.position)
+)
+
+28) Stats: find players where (PTS >= 15 AND Plus_Minus > 0) OR (G >= 10).
+statement = select(Stats).where(((Stats.PTS >= 15) & (Stats.Plus_Minus > 0)) | (Stats.G >= 10))
+
+29) Stats: group by last_name initial (first character) and count players per initial.
+initial = func.substr(Stats.last_name, 1, 1).label("initial")
+player_count = func.count().label("player_count")
+statement = (
+    select(initial, player_count)
+    .where(Stats.last_name.is_not(None))
+    .group_by(initial)
+    .order_by(initial)
+)
+
+30) Stats: average SH_PCT by GP group, only groups with avg SH_PCT > 10, ordered descending.
+avg_sh_pct = func.avg(Stats.SH_PCT).label("avg_sh_pct")
+statement = (
+    select(Stats.GP, avg_sh_pct)
+    .where(Stats.GP.is_not(None), Stats.SH_PCT.is_not(None))
+    .group_by(Stats.GP)
+    .having(avg_sh_pct > 10)
+    .order_by(desc(avg_sh_pct))
+)
+
+Running pattern (works for all statements):
+with Session(engine) as session:
+    rows = session.exec(statement).all()
+    for row in rows:
+        print(row)
