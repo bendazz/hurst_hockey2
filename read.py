@@ -1,19 +1,14 @@
 from sqlmodel import Session, select
-from models import engine,Bio
+from models import engine,Bio,Stats
 import pandas as pd
-from sqlalchemy import func
 
 with Session(engine) as session:
     statement = (
-        select(Bio.position,func.avg(Bio.weight).label("average_weight"))
-        .group_by(Bio.position)
-        .order_by(func.avg(Bio.weight).desc())
+        select(Bio.first_name,Bio.last_name,Bio.position)
+        .order_by(Bio.position,Bio.last_name)
+        
     )
-    results = session.exec(statement).all()
+    records = session.exec(statement).all()
     
-    
-for result in results:
-    print(result)
-    
-
-
+records_df = pd.DataFrame(records)
+print(records_df)
