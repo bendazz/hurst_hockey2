@@ -122,7 +122,7 @@
 <body>
   <main class="container">
     <h1>SQLModel Query Practice</h1>
-    <p class="subtitle">No joins. Students can draft a query, then reveal or hide the answer.</p>
+    <p class="subtitle">Students can draft a query, then reveal or hide the answer.</p>
 
     <div class="toolbar">
       <button class="primary" id="showAll">Reveal All Answers</button>
@@ -163,7 +163,10 @@
       { id: 27, concept: "multiple aggregates", prompt: "Group Bio by position and compute min/max/avg weight.", answer: "min_weight = func.min(Bio.weight).label(\"min_weight\")\nmax_weight = func.max(Bio.weight).label(\"max_weight\")\navg_weight = func.avg(Bio.weight).label(\"avg_weight\")\nstatement = (\n    select(Bio.position, min_weight, max_weight, avg_weight)\n    .where(Bio.position.is_not(None), Bio.weight.is_not(None))\n    .group_by(Bio.position)\n)" },
       { id: 28, concept: "mixed logic", prompt: "Find Stats rows where (PTS >= 15 AND Plus_Minus > 0) OR (G >= 10).", answer: "statement = select(Stats).where(((Stats.PTS >= 15) & (Stats.Plus_Minus > 0)) | (Stats.G >= 10))" },
       { id: 29, concept: "func + group_by", prompt: "Group Stats by first letter of last_name and count players.", answer: "initial = func.substr(Stats.last_name, 1, 1).label(\"initial\")\nplayer_count = func.count().label(\"player_count\")\nstatement = (\n    select(initial, player_count)\n    .where(Stats.last_name.is_not(None))\n    .group_by(initial)\n    .order_by(initial)\n)" },
-      { id: 30, concept: "having + order_by", prompt: "Average SH_PCT by GP, keep groups with avg > 10, order desc.", answer: "avg_sh_pct = func.avg(Stats.SH_PCT).label(\"avg_sh_pct\")\nstatement = (\n    select(Stats.GP, avg_sh_pct)\n    .where(Stats.GP.is_not(None), Stats.SH_PCT.is_not(None))\n    .group_by(Stats.GP)\n    .having(avg_sh_pct > 10)\n    .order_by(desc(avg_sh_pct))\n)" }
+      { id: 30, concept: "having + order_by", prompt: "Average SH_PCT by GP, keep groups with avg > 10, order desc.", answer: "avg_sh_pct = func.avg(Stats.SH_PCT).label(\"avg_sh_pct\")\nstatement = (\n    select(Stats.GP, avg_sh_pct)\n    .where(Stats.GP.is_not(None), Stats.SH_PCT.is_not(None))\n    .group_by(Stats.GP)\n    .having(avg_sh_pct > 10)\n    .order_by(desc(avg_sh_pct))\n)" },
+      { id: 31, concept: "inner join + where", prompt: "Inner join Bio and Stats, then show first_name, last_name, position, and PTS for players with PTS >= 20.", answer: "statement = (\n    select(Bio.first_name, Bio.last_name, Bio.position, Stats.PTS)\n    .join(Stats, (Bio.first_name == Stats.first_name) & (Bio.last_name == Stats.last_name))\n    .where(Stats.PTS >= 20)\n)" },
+      { id: 32, concept: "inner join + order_by", prompt: "Inner join Bio and Stats, then list players (name + hometown) ordered by PTS descending.", answer: "statement = (\n    select(Bio.first_name, Bio.last_name, Bio.hometown, Stats.PTS)\n    .join(Stats, (Bio.first_name == Stats.first_name) & (Bio.last_name == Stats.last_name))\n    .where(Stats.PTS.is_not(None))\n    .order_by(Stats.PTS.desc())\n)" },
+      { id: 33, concept: "inner join + group_by", prompt: "Inner join Bio and Stats, then compute average PTS by position (highest average first).", answer: "avg_pts = func.avg(Stats.PTS).label(\"avg_pts\")\nstatement = (\n    select(Bio.position, avg_pts)\n    .join(Stats, (Bio.first_name == Stats.first_name) & (Bio.last_name == Stats.last_name))\n    .where(Bio.position.is_not(None), Stats.PTS.is_not(None))\n    .group_by(Bio.position)\n    .order_by(desc(avg_pts))\n)" }
     ];
 
     const app = document.getElementById("app");
